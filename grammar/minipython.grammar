@@ -1,0 +1,379 @@
+Package minipython;
+
+Helpers
+    digit = ['0'..'9'];
+    letter = ['a'..'z'] | ['A'..'Z'];
+    cr = 13;
+    lf = 10;
+    space=32; 
+    doublequote = 34; 
+    singlequote = 39; 
+    all = [0 .. 127];
+    eol = lf | cr | cr lf;
+    not_eol = [all - [cr + lf]];
+    str = [not_eol- [doublequote + singlequote]] ;
+
+Tokens
+    tab = 9;
+    def = 'def';
+    if = 'if';
+    while = 'while';
+    for = 'for';
+    in = 'in';
+    return = 'return';
+    print = 'print';
+    true = 'true';
+    false = 'false';
+    none = 'None';
+
+    power = '**';
+    plus = '+';
+    minus = '-';
+    plusplus = '++';
+    equalequal = '==';
+    minusminus = '--'; 
+    minequal = '-=';
+    plusequal = '+=';
+    divequal = '/=';
+    multequal = '*=';
+    mult = '*';
+    div = '/';
+    mod = '%';
+    greater = '>';
+    less = '<';
+    greaterequal = '>=';
+    lessequal = '<=';
+    assignment = '=';
+    not_equal = '!=';
+    not = 'not';
+    logic_and = 'and';
+    logic_or = 'or';
+    assert = 'assert';
+    length = 'len';
+    max = 'max';
+    min = 'min';
+
+    type = 'type'; 
+    open = 'open'; 
+    ascii = 'ascii';
+    import = 'import';
+    as = 'as';
+
+    lparen = '(';
+    rparen = ')';
+    lbracket = '[';
+    rbracket = ']';
+    comma = ',';
+    colon = ':';
+    dot = '.';
+    quote = '"';
+
+    integer = digit+;
+    decimal = digit+ '.' digit+;
+    string_double_quotes = '"' str* '"';
+    string_single_quotes = ''' str* ''';
+
+    identifier = (letter | '_') (letter | digit | '_')*;
+
+    whitespace = (' ' | lf | cr);
+    comment = '#' not_eol* eol;
+
+Ignored Tokens
+    whitespace, comment;
+
+Productions
+    programme = commands* {-> New programme([commands])} ;
+    
+    commands = {func} function {-> New commands.func(function)} | 
+               {stat} statement {-> New commands.stat(statement)};
+        
+    function = {def_func} tab * def identifier lparen argument_opt rparen colon statement
+               {-> New function.def_func(identifier, argument_opt, statement)};
+    
+    argument_opt = {no_args} {-> New argument_opt.no_args()} | 
+                   {has_args} argument {-> New argument_opt.has_args(argument)};
+    
+    argument = {argument} identifier assign_value_opt argument_tail
+               {-> New argument.argument(identifier, assign_value_opt, argument_tail)};
+    
+    argument_tail = {end} {-> New argument_tail.end()} | 
+                    {continue} comma identifier assign_value_opt argument_tail
+                    {-> New argument_tail.continue(comma, identifier, assign_value_opt, argument_tail)};
+        
+    assign_value_opt = {no_value} {-> New assign_value_opt.no_value()} | 
+                       {has_value} assignment valuenode {-> New assign_value_opt.has_value(assignment, valuenode)};
+   
+    statement = {if_statement} tab * if comparison colon statement 
+                {-> New statement.if_statement(if, comparison, statement)} | 
+                {while_statement} tab * while comparison colon statement 
+                {-> New statement.while_statement(while, comparison, statement)} |
+                {for_statement} tab * for [lid]:identifier in [rid]:identifier colon statement
+                {-> New statement.for_statement(for, lid, in, rid, statement)} |
+                {print_statement} tab * print print_items
+                {-> New statement.print_statement(print, print_items)} |
+                {return_statement} tab * return expression
+                {-> New statement.return_statement(return, expression)} | 
+                {assign_statement} tab * identifier assignment expression
+                {-> New statement.assign_statement(identifier, assignment, expression)} |
+                {mineq_statement} tab * identifier minequal expression
+                {-> New statement.mineq_statement(identifier, minequal, expression)} |
+                {pluseq_statement} tab * identifier plusequal expression
+                {-> New statement.pluseq_statement(identifier, plusequal, expression)} |
+                {multeq_statement} tab * identifier multequal expression
+                {-> New statement.multeq_statement(identifier, multequal, expression)} |
+                {diveq_statement} tab * identifier divequal expression
+                {-> New statement.diveq_statement(identifier, divequal, expression)} |
+                {array_statement} tab * identifier lbracket [lex]:expression rbracket assignment [rex]:expression
+                {-> New statement.array_statement(identifier, lex, assignment, rex)} |
+                {assertion_statement} tab * assert expression comma_expression_opt
+                {-> New statement.assertion_statement(assert, expression, comma_expression_opt)} |
+                {function_call_statement} tab * function_call
+                {-> New statement.function_call_statement(function_call)} |
+                {import_statement} tab * import import_list
+                {-> New statement.import_statement(import, import_list)};
+  
+    print_items = {items} expression print_tail {-> New print_items.items(expression, print_tail)};
+
+    print_tail = {end} {-> New print_tail.end()} | 
+                 {continue} comma expression print_tail {-> New print_tail.continue(comma, expression, print_tail)};
+    
+    comma_expression_opt = {none} {-> New comma_expression_opt.none()} | 
+                           {present} comma expression {-> New comma_expression_opt.present(comma, expression)};
+  
+    import_list = {imports} import_spec import_list_tail {-> New import_list.imports(import_spec, import_list_tail)};
+
+    import_list_tail = {empty} {-> New import_list_tail.empty()} | 
+                       {continue} comma import_spec import_list_tail {-> New import_list_tail.continue(comma, import_spec, import_list_tail)};
+    
+    import_spec = {simple_import} module_path {-> New import_spec.simple_import(module_path)} | 
+                  {import_as} module_path as identifier {-> New import_spec.import_as(module_path, as, identifier)};
+    
+    module_path = {path} identifier module_path_tail {-> New module_path.path(identifier, module_path_tail)};
+
+    module_path_tail = {empty} {-> New module_path_tail.empty()} | 
+                       {continue} dot identifier module_path_tail {-> New module_path_tail.continue(dot, identifier, module_path_tail)};
+
+    function_call = {no_args} identifier lparen rparen {-> New function_call.no_args(identifier, lparen, rparen)} |
+                    {with_args} identifier lparen call_args rparen {-> New function_call.with_args(identifier, lparen, call_args, rparen)};
+    
+    call_args = {args} expression call_args_tail {-> New call_args.args(expression, call_args_tail)};
+
+    call_args_tail = {end} {-> New call_args_tail.end()} | 
+                     {continue} comma expression call_args_tail {-> New call_args_tail.continue(comma, expression, call_args_tail)};
+
+    comma_expression = {single_comma_expr} comma expression {-> New comma_expression.single_comma_expr(comma, expression)};
+    
+    comparison = {comp} afteror {-> New comparison.comp(afteror)} |
+                 {comp2} comparison logic_or afteror {-> New comparison.comp2(comparison, logic_or, afteror)};
+                
+    afteror = {aftor} afterand {-> New afteror.aftor(afterand)} |
+              {aftorand} afteror logic_and afterand {-> New afteror.aftorand(afteror, logic_and, afterand)};
+            
+    afterand = {aftand} afternot {-> New afterand.aftand(afternot)} |
+               {aftnot} not afternot {-> New afterand.aftnot(not, afternot)};
+
+    afternot = {true} true {-> New afternot.true(true)} |
+               {false} false {-> New afternot.false(false)} |
+               {lessequal} [left1]:expression lessequal [right1]:expression 
+               {-> New afternot.lessequal(left1, lessequal, right1)} |               
+               {greaterequal} [left2]:expression greaterequal [right2]:expression 
+               {-> New afternot.greaterequal(left2, greaterequal, right2)} |
+               {different} [left3]:expression not_equal [right3]:expression 
+               {-> New afternot.different(left3, not_equal, right3)} |   
+               {equal} [left4]:expression equalequal [right4]:expression 
+               {-> New afternot.equal(left4, equalequal, right4)} |  
+               {less} [left5]:expression less [right5]:expression 
+               {-> New afternot.less(left5, less, right5)} |
+               {greater} [left6]:expression greater [right6]:expression 
+               {-> New afternot.greater(left6, greater, right6)};
+
+    expression = {add_mult} expression plus multiplication {-> New expression.add_mult(expression, plus, multiplication)} |
+                 {sub_mult} expression minus multiplication {-> New expression.sub_mult(expression, minus, multiplication)} |
+                 {add_max} expression plus max lparen max_args rparen {-> New expression.add_max(expression, plus, max, max_args)} |
+                 {sub_max} expression minus max lparen max_args rparen {-> New expression.sub_max(expression, minus, max, max_args)} |
+                 {add_min} expression plus min lparen min_args rparen {-> New expression.add_min(expression, plus, min, min_args)} |
+                 {sub_min} expression minus min lparen min_args rparen {-> New expression.sub_min(expression, minus, min, min_args)} |
+                 {max_only} max lparen max_args rparen {-> New expression.max_only(max, max_args)} |
+                 {min_only} min lparen min_args rparen {-> New expression.min_only(min, min_args)} |
+                 {base_mult} multiplication {-> New expression.base_mult(multiplication)};
+
+    max_args = [first]:value [tail]:max_args_tail {-> New max_args.max_args(first, tail)};
+
+    max_args_tail = {end} {-> New max_args_tail.end()} | 
+                    {continue} comma value max_args_tail {-> New max_args_tail.continue(comma, value, max_args_tail)};
+    
+    min_args = [first]:value [rest]:min_args_tail {-> New min_args.min_args(first, rest)};
+
+    min_args_tail = {end} {-> New min_args_tail.end()} | 
+                    {continue} comma value min_args_tail {-> New min_args_tail.continue(comma, value, min_args_tail)};
+
+    primary = {int} integer {-> New primary.int(integer)} |
+              {dec} decimal {-> New primary.dec(decimal)} |
+              {id} identifier {-> New primary.id(identifier)} |
+              {str} string_double_quotes {-> New primary.str(string_double_quotes)} |
+              {str_s} string_single_quotes {-> New primary.str_s(string_single_quotes)} |
+              {paren_expr} lparen expression rparen {-> New primary.paren_expr(lparen, expression, rparen)} |
+              {func_call} function_call {-> New primary.func_call(function_call)};
+        
+    multiplication = {mult} multiplication mult pow {-> New multiplication.mult(multiplication, mult, pow)} |
+                     {div} multiplication div pow {-> New multiplication.div(multiplication, div, pow)} |
+                     {mod} multiplication mod pow {-> New multiplication.mod(multiplication, mod, pow)} |
+                     {base_pow} pow {-> New multiplication.base_pow(pow)};
+
+    pow = {value} value {-> New pow.value(value)} | 
+          {pow} pow power value {-> New pow.pow(pow, power, value)};
+                    
+    value = {value_subset} valuenode {-> New value.value_subset(valuenode)} |
+            {pinakas_expression} identifier lbracket expression rbracket {-> New value.pinakas_expression(identifier, expression)} |
+            {func_call_expression} function_call {-> New value.func_call_expression(function_call)} |
+            {length_expession} length lparen expression rparen {-> New value.length_expession(length, expression)} |
+            {type_expression} type lparen expression rparen {-> New value.type_expression(type, expression)} |
+            {open_expression} open lparen expression rparen {-> New value.open_expression(open, expression)} |
+            {ascii_expression} ascii lparen expression rparen {-> New value.ascii_expression(ascii, expression)} |
+            {parenthesis_expression} lparen expression rparen {-> New value.parenthesis_expression(lparen, expression, rparen)} |
+            {brackets_expression} lbracket expression_list_opt rbracket {-> New value.brackets_expression(expression_list_opt)};
+
+    expression_list_opt = {empty} {-> New expression_list_opt.empty()} | 
+                          {has_items} expression_list {-> New expression_list_opt.has_items(expression_list)};
+    
+    expression_list = [first]:expression [rest]:expr_list_tail {-> New expression_list.expr_list(first, rest)};
+
+    expr_list_tail = {end} {-> New expr_list_tail.end()} | 
+                     {continue} comma expression expr_list_tail {-> New expr_list_tail.continue(comma, expression, expr_list_tail)};
+  
+    valuenode = {id_dot_func} identifier dot function_call {-> New valuenode.id_dot_func(identifier, function_call)} |
+                {identifier} identifier {-> New valuenode.identifier(identifier)} |
+                {double_quotes} string_double_quotes {-> New valuenode.double_quotes(string_double_quotes)} |
+                {single_quotes} string_single_quotes {-> New valuenode.single_quotes(string_single_quotes)} |
+                {integer_literal} integer {-> New valuenode.integer_literal(integer)} |
+                {decimal_literal} decimal {-> New valuenode.decimal_literal(decimal)} |
+                {none_value} none {-> New valuenode.none_value(none)};
+
+Abstract Syntax Tree
+    programme = commands*;
+ 
+    commands = {func} [func]:function | 
+               {stat} [stmt]:statement;
+    
+    function = {def_func} [name]:identifier [args]:argument_opt [body]:statement;
+    
+    argument_opt = {no_args} | {has_args} [arg]:argument;
+    
+    argument = {argument} [param]:identifier [default]:assign_value_opt [rest]:argument_tail;
+    
+    argument_tail = {end} | {continue} [next_comma]:comma [next_param]:identifier [next_default]:assign_value_opt [more]:argument_tail;
+    
+    assign_value_opt = {no_value} | {has_value} [assign]:assignment [value]:valuenode;
+    
+    statement = {if_statement} [if_tok]:if [cond]:comparison [then]:statement | 
+                {while_statement} [while_tok]:while [cond]:comparison [body]:statement |
+                {for_statement} [for_tok]:for [var]:identifier [in_tok]:in [iter]:identifier [body]:statement |
+                {print_statement} [print_tok]:print [items]:print_items |
+                {return_statement} [return_tok]:return [expr]:expression | 
+                {assign_statement} [id]:identifier [assign_tok]:assignment [expr]:expression |
+                {mineq_statement} [id]:identifier [op]:minequal [expr]:expression |
+                {pluseq_statement} [id]:identifier [op]:plusequal [expr]:expression |
+                {multeq_statement} [id]:identifier [op]:multequal [expr]:expression |
+                {diveq_statement} [id]:identifier [op]:divequal [expr]:expression |
+                {array_statement} [id]:identifier [index]:expression [assign_tok]:assignment [value]:expression |
+                {assertion_statement} [assert_tok]:assert [expr]:expression [msg]:comma_expression_opt |
+                {function_call_statement} [call]:function_call |
+                {import_statement} [import_tok]:import [imports]:import_list;
+
+    print_items = {items} [first]:expression [rest]:print_tail;
+    
+    print_tail = {end} | {continue} [comma_tok]:comma [next]:expression [more]:print_tail;
+    
+    comma_expression_opt = {none} | {present} [comma_tok]:comma [expr]:expression;
+    
+    import_list = {imports} [first]:import_spec [rest]:import_list_tail;
+    
+    import_list_tail = {empty} | {continue} [comma_tok]:comma [next]:import_spec [more]:import_list_tail;
+    
+    import_spec = {simple_import} [path]:module_path | {import_as} [path]:module_path [as_tok]:as [alias]:identifier;
+    
+    module_path = {path} [first]:identifier [rest]:module_path_tail;
+    
+    module_path_tail = {empty} | {continue} [dot_tok]:dot [next]:identifier [more]:module_path_tail;
+
+    function_call = {no_args} [name]:identifier [lparen_tok]:lparen [rparen_tok]:rparen |
+                    {with_args} [name]:identifier [lparen_tok]:lparen [args]:call_args [rparen_tok]:rparen;
+    
+    call_args = {args} [first]:expression [rest]:call_args_tail;
+    
+    call_args_tail = {end} | {continue} [comma_tok]:comma [next]:expression [more]:call_args_tail;
+
+    comma_expression = {single_comma_expr} [comma_tok]:comma [expr]:expression;
+    
+    comparison = {comp} [expr]:afteror | {comp2} [left]:comparison [op]:logic_or [right]:afteror;
+    
+    afteror = {aftor} [expr]:afterand | {aftorand} [left]:afteror [op]:logic_and [right]:afterand;
+    
+    afterand = {aftand} [expr]:afternot | {aftnot} [op]:not [expr]:afternot;
+
+    afternot = {true} [val]:true |
+               {false} [val]:false |
+               {lessequal} [left]:expression [op]:lessequal [right]:expression |
+               {greaterequal} [left]:expression [op]:greaterequal [right]:expression |
+               {different} [left]:expression [op]:not_equal [right]:expression |   
+               {equal} [left]:expression [op]:equalequal [right]:expression |  
+               {less} [left]:expression [op]:less [right]:expression |
+               {greater} [left]:expression [op]:greater [right]:expression;
+
+    expression = {add_mult} [left]:expression [op]:plus [right]:multiplication |
+                 {sub_mult} [left]:expression [op]:minus [right]:multiplication |
+                 {add_max} [left]:expression [op]:plus [max_tok]:max [args]:max_args |
+                 {sub_max} [left]:expression [op]:minus [max_tok]:max [args]:max_args |
+                 {add_min} [left]:expression [op]:plus [min_tok]:min [args]:min_args |
+                 {sub_min} [left]:expression [op]:minus [min_tok]:min [args]:min_args |
+                 {max_only} [max_tok]:max [args]:max_args |
+                 {min_only} [min_tok]:min [args]:min_args |
+                 {base_mult} [expr]:multiplication;
+
+    max_args = {max_args} [first]:value [rest]:max_args_tail;
+    
+    max_args_tail = {end} | {continue} [comma_tok]:comma [next]:value [more]:max_args_tail;
+    
+    min_args = {min_args} [first]:value [rest]:min_args_tail;
+    
+    min_args_tail = {end} | {continue} [comma_tok]:comma [next]:value [more]:min_args_tail;
+
+    primary = {int} [val]:integer |
+              {dec} [val]:decimal |
+              {id} [name]:identifier |
+              {str} [val]:string_double_quotes |
+              {str_s} [val]:string_single_quotes |
+              {paren_expr} [lparen_tok]:lparen [expr]:expression [rparen_tok]:rparen |
+              {func_call} [call]:function_call;
+    
+    multiplication = {mult} [left]:multiplication [op]:mult [right]:pow |
+                     {div} [left]:multiplication [op]:div [right]:pow |
+                     {mod} [left]:multiplication [op]:mod [right]:pow |
+                     {base_pow} [expr]:pow;
+
+    pow = {value} [expr]:value | {pow} [left]:pow [op]:power [right]:value;
+    
+    value = {value_subset} [val]:valuenode |
+            {pinakas_expression} [id]:identifier [index]:expression |
+            {func_call_expression} [call]:function_call |
+            {length_expession} [len_tok]:length [expr]:expression |
+            {type_expression} [type_tok]:type [expr]:expression |
+            {open_expression} [open_tok]:open [expr]:expression |
+            {ascii_expression} [ascii_tok]:ascii [expr]:expression |
+            {parenthesis_expression} [lparen_tok]:lparen [expr]:expression [rparen_tok]:rparen |
+            {brackets_expression} [list]:expression_list_opt;
+
+    expression_list_opt = {empty} | {has_items} [items]:expression_list;
+    
+    expression_list = {expr_list} [first]:expression [rest]:expr_list_tail;
+    
+    expr_list_tail = {end} | {continue} [comma_tok]:comma [next]:expression [more]:expr_list_tail;
+    
+    valuenode = {id_dot_func} [obj]:identifier [call]:function_call |
+                {identifier} [name]:identifier |
+                {double_quotes} [val]:string_double_quotes |
+                {single_quotes} [val]:string_single_quotes |
+                {integer_literal} [val]:integer |
+                {decimal_literal} [val]:decimal |
+                {none_value} [val]:none;
+    
