@@ -1,0 +1,41 @@
+# =========================
+# Java Compiled Files
+# =========================
+*.class
+*.log
+
+# =========================
+# Build Directories
+# =========================
+build/
+bin/
+out/
+target/
+
+# =========================
+# Dependencies
+# =========================
+lib/
+*.jar
+
+# =========================
+# Test Outputs
+# =========================
+test_results_*/
+output.tmp
+
+# =========================
+# IDE Files
+# =========================
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# =========================
+# OS Files
+# =========================
+.DS_Store
+Thumbs.db
